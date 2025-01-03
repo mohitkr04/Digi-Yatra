@@ -71,13 +71,7 @@ cd digi-yatra
 npm install
 ```
 
-3. Create a .env file with required configurations:
-```env
-VITE_APP_TITLE=DigiYatra
-VITE_APP_API_URL=your_api_url
-```
-
-4. Start the development server:
+3. Start the development server:
 ```bash
 npm run dev
 ```
@@ -142,14 +136,6 @@ digi-yatra/
 └── package.json
 ```
 
-## 🔒 Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-VITE_APP_TITLE=DigiYatra
-VITE_APP_VERSION=1.0.0
-```
 
 ## 🤝 Contributing
 

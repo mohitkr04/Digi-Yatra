@@ -65,9 +65,10 @@ export const AIRLINES = [
 ];
 
 // Add this interface for better type safety
-interface FlightOffer {
+export interface Flight {
   id: string;
   airline: string;
+  airlineCode: string;
   logo: string;
   flightNumber: string;
   from: string;
@@ -76,9 +77,11 @@ interface FlightOffer {
   departureTime: string;
   arrivalTime: string;
   duration: string;
-  price: number;
   type: string;
+  price: number;
   seatsAvailable: number;
+  terminal: string;
+  gate: string;
   specialOffer?: {
     tag: string;
     originalPrice: number;
@@ -97,16 +100,6 @@ const getCurrentTime = () => {
 const formatTime = (hours: number, minutes: number) => {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
-
-const addMinutes = (timeStr: string, minutes: number) => {
-  const [hours, mins] = timeStr.split(':').map(Number);
-  const totalMinutes = hours * 60 + mins + minutes;
-  const newHours = Math.floor(totalMinutes / 60) % 24;
-  const newMinutes = totalMinutes % 60;
-  return formatTime(newHours, newMinutes);
-};
-
-// Add utility function to format duration
 const formatDuration = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
@@ -184,7 +177,7 @@ export const generateFlightSchedules = (from: string, to: string, date: string) 
   const timeSlots = generateTimeSlots();
 
   // Generate flights with the new duration logic
-  const flights = AIRLINES.flatMap((airline, index) => {
+  const flights = AIRLINES.flatMap((airline) => {
     return timeSlots.map((slot, slotIndex) => {
       const basePrice = Math.floor(
         route.basePrice + (Math.random() * 2000) + 
@@ -224,7 +217,7 @@ export const generateFlightSchedules = (from: string, to: string, date: string) 
   specialOfferIndices.forEach(index => {
     const originalPrice = flights[index].price;
     flights[index].price = Math.floor(4000 + (Math.random() * 1000));
-    flights[index].specialOffer = {
+    (flights[index] as any)['specialOffer'] = {
       tag: getSpecialOfferTag(),
       originalPrice
     };

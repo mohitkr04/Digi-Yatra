@@ -82,10 +82,10 @@ export const Header = () => {
                 transition={{ delay: index * 0.1 }}
               >
                 <ListItem
-                  button
+                  component="div"
                   onClick={() => handleNavigation(item.path)}
                   sx={{
-                    borderRadius: 2,
+                    borderRadius: 1,
                     mb: 1,
                     backgroundColor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.2)' : 'transparent',
                     '&:hover': {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Container,
   Paper,
@@ -20,7 +20,6 @@ import Dialog from '@mui/material/Dialog';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import FlightIcon from '@mui/icons-material/Flight';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import FlightLandIcon from '@mui/icons-material/FlightLand';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
@@ -46,52 +45,30 @@ const FLIGHT_SUGGESTIONS = [
   },
 ];
 
-const AVAILABLE_FLIGHTS = [
-  {
-    id: 1,
-    airline: 'SpiceJet',
-    logo: '/airlines/spicejet.png',
-    flightNumber: 'SG 101',
-    departureTime: '20:08',
-    arrivalTime: '22:08',
-    duration: '2hr 15min',
-    price: 7350,
-    type: 'Non Stop'
-  },
-  {
-    id: 2,
-    airline: 'IndiGo',
-    logo: '/airlines/indigo.png',
-    flightNumber: '6E 201',
-    departureTime: '21:08',
-    arrivalTime: '23:08',
-    duration: '2hr 15min',
-    price: 7650,
-    type: 'Non Stop'
-  },
-  {
-    id: 3,
-    airline: 'Akasa Air',
-    logo: '/airlines/akasa.png',
-    flightNumber: 'QP 401',
-    departureTime: '14:08',
-    arrivalTime: '16:08',
-    duration: '2hr 15min',
-    price: 8180,
-    type: 'Non Stop'
-  },
-  {
-    id: 4,
-    airline: 'Air India',
-    logo: '/airlines/airindia.png',
-    flightNumber: 'AI 501',
-    departureTime: '17:08',
-    arrivalTime: '19:08',
-    duration: '2hr 15min',
-    price: 8350,
-    type: 'Non Stop'
-  }
-];
+
+interface Flight {
+  id: string;
+  airline: string;
+  airlineCode: string;
+  logo: string;
+  flightNumber: string;
+  from: string;
+  to: string;
+  date: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  type: string;
+  price: number;
+  seatsAvailable: number;
+  terminal: string;
+  gate: string;
+  specialOffer?: {
+    tag: string;
+    originalPrice: number;
+  };
+}
+
 
 const SearchContainer = styled(Container)(({ theme }) => ({
   maxWidth: '1200px !important',
@@ -296,53 +273,39 @@ const SearchInput = ({
   );
 };
 
-const FlightResult = ({ flight, onSelect }: { 
-  flight: ReturnType<typeof generateFlightSchedules>[0],
-  onSelect: () => void 
-}) => (
-  <Paper
-    elevation={2}
-    sx={{
-      p: 2,
+interface FlightResultProps {
+  flight: Flight;
+  onSelect: () => void;
+}
+
+const FlightResult: React.FC<FlightResultProps> = ({ flight, onSelect }) => (
+  <Paper 
+    elevation={2} 
+    sx={{ 
+      p: 2, 
       mb: 2,
-      borderRadius: 2,
-      transition: 'all 0.2s ease',
+      transition: 'transform 0.2s',
       '&:hover': {
-        transform: 'translateY(-2px)',
-        boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+        transform: 'translateY(-2px)'
       }
     }}
   >
-    <Grid container alignItems="center" spacing={2}>
+    <Grid container spacing={2} alignItems="center">
       <Grid item xs={12} sm={2}>
-        <Box
-          component="img"
-          src={flight.logo}
-          alt={flight.airline}
-          sx={{ 
-            height: 40, 
-            objectFit: 'contain',
-            width: '100%',
-            maxWidth: '120px',
-            filter: 'brightness(1.1)',
-            mixBlendMode: 'multiply',
-            '&:hover': {
-              transform: 'scale(1.05)',
-            },
-            transition: 'transform 0.2s ease'
-          }}
-          onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-            e.currentTarget.src = '/default-airline.png';
-          }}
-        />
-        <Typography 
-          variant="caption" 
-          display="block" 
-          textAlign="center"
-          sx={{ mt: 0.5 }}
-        >
-          {flight.flightNumber}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box
+            component="img"
+            src={flight.logo}
+            alt={flight.airline}
+            sx={{ height: 40, objectFit: 'contain' }}
+          />
+          <Box>
+            <Typography variant="subtitle1">{flight.airline}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {flight.flightNumber}
+            </Typography>
+          </Box>
+        </Box>
       </Grid>
 
       <Grid item xs={12} sm={4}>
@@ -446,15 +409,27 @@ const FlightResult = ({ flight, onSelect }: {
   </Paper>
 );
 
+interface Airport {
+  code: string;
+  name: string;
+  city?: string;
+}
+
+interface SearchData {
+  from: Airport;
+  to: Airport;
+  date: string;
+}
+
 export const SearchFlight = () => {
   const navigate = useNavigate();
   const { dispatch } = useFlightContext();
   const [openWelcome, setOpenWelcome] = useState(true);
   const [openInstructions, setOpenInstructions] = useState(false);
-  const [searchData, setSearchData] = useState({
-    from: '',
-    to: '',
-    date: '',
+  const [searchData, setSearchData] = useState<SearchData>({
+    from: { code: '', name: '' },
+    to: { code: '', name: '' },
+    date: ''
   });
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [showResults, setShowResults] = useState(false);
@@ -480,8 +455,13 @@ export const SearchFlight = () => {
     setSearchError(null);
 
     try {
-      const fromCode = typeof searchData.from === 'string' ? searchData.from : searchData.from.code;
-      const toCode = typeof searchData.to === 'string' ? searchData.to : searchData.to.code;
+      const fromCode = typeof searchData.from === 'string' 
+        ? searchData.from 
+        : typeof searchData.from === 'object' && 'code' in searchData.from ? (searchData.from as { code: string }).code : '';
+
+      const toCode = typeof searchData.to === 'string'
+        ? searchData.to
+        : typeof searchData.to === 'object' && 'code' in searchData.to ? (searchData.to as { code: string }).code : '';
 
       if (fromCode === toCode) {
         setSearchError('Source and destination cannot be the same');
@@ -505,30 +485,25 @@ export const SearchFlight = () => {
     }
   };
 
-  const handleSelectFlight = (flight: typeof AVAILABLE_FLIGHTS[0]) => {
+  const handleSelectFlight = (flight: Flight) => {
     try {
-      const flightDetails = {
-        from: typeof searchData.from === 'string' ? searchData.from : searchData.from.code,
-        to: typeof searchData.to === 'string' ? searchData.to : searchData.to.code,
-        date: searchData.date,
-        flightNumber: flight.flightNumber,
-        airline: flight.airline,
-        airlineCode: flight.airlineCode,
-        departureTime: flight.departureTime,
-        arrivalTime: flight.arrivalTime,
-        terminal: flight.terminal,
-        gate: flight.gate,
-        duration: flight.duration,
-        price: flight.price
-      };
-
       dispatch({
         type: 'SET_FLIGHT_DETAILS',
-        payload: flightDetails
+        payload: {
+          from: flight.from,
+          to: flight.to,
+          date: flight.date,
+          flightNumber: flight.flightNumber,
+          airline: flight.airline,
+          airlineCode: flight.airlineCode,
+          departureTime: flight.departureTime,
+          arrivalTime: flight.arrivalTime,
+          terminal: flight.terminal,
+          gate: flight.gate,
+          duration: flight.duration
+        }
       });
-
-      console.log('Saved flight details:', flightDetails);
-      navigate('/passenger-details');
+      setOpenInstructions(true);
     } catch (error) {
       console.error('Error saving flight details:', error);
       alert('Please select valid flight details');

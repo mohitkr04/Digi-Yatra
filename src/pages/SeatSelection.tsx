@@ -18,7 +18,7 @@ const seatVariants = {
 const occupiedSeats = ['1A', '1F', '2B', '3E', '4C', '7D', '8A', '10F'];
 
 export const SeatSelection = () => {
-  const { state, dispatch } = useFlightContext();
+  const { dispatch } = useFlightContext();
   const navigate = useNavigate();
   const [selectedSeats, setSelectedSeats] = useState<string[]>([]);
 

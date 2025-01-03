@@ -9,16 +9,13 @@ import {
   CircularProgress,
   Snackbar,
   Alert,
-  Zoom,
 } from '@mui/material';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useNavigate } from 'react-router-dom';
-import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useFlightContext } from '../context/FlightContext';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { styled } from '@mui/material/styles';
-import { StateDebugger } from '../components/StateDebugger';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 interface FlightDetails {
@@ -54,13 +51,14 @@ interface BoardingPass {
     gate: string;
     terminal: string;
     boardingTime: string;
+    duration: string;
   };
   seq: string;
   pnr: string;
   services: string;
 }
 
-const ApprovalStamp = styled(Box)(({ theme }) => ({
+const ApprovalStamp = styled(Box)(() => ({
   position: 'absolute',
   top: '50%',
   right: '8%',
@@ -134,7 +132,7 @@ const validateFlightData = (state: Partial<FlightState>): boolean => {
 
   // Check both passengers have required fields
   const passengersValid = ['person1', 'person2'].every(person => {
-    const p = state.passengers[person as keyof typeof state.passengers];
+    const p = state.passengers?.[person as keyof typeof state.passengers];
     const isValid = p?.firstName && p?.lastName;
     if (!isValid) {
       console.error(`Invalid passenger data for ${person}:`, p);
@@ -157,7 +155,7 @@ const validateFlightData = (state: Partial<FlightState>): boolean => {
   return true;
 };
 
-const StyledPaper = styled(Paper)(({ theme }) => ({
+const StyledPaper = styled(Paper)(() => ({
   transition: 'transform 0.3s ease, box-shadow 0.3s ease',
   maxWidth: '900px',
   margin: '0 auto',
@@ -201,19 +199,18 @@ export const BoardingPass = () => {
   };
 
   const generateBoardingPass = async (passengerIndex: number): Promise<BoardingPass | null> => {
-    if (!state) return null;
+    if (!state?.flightDetails) return null;
 
     const personKey = `person${passengerIndex + 1}` as keyof typeof state.passengers;
     const passenger = state.passengers[personKey];
     const seat = state.selectedSeats[passengerIndex];
 
-    if (!passenger || !seat || !state.flightDetails) {
+    if (!passenger || !seat) {
       setError(`Missing data for passenger ${passengerIndex + 1}`);
       return null;
     }
 
-    // Calculate boarding time (30 minutes before departure)
-    const boardingTime = calculateBoardingTime(state.flightDetails.departureTime);
+    const boardingTime = calculateBoardingTime(state.flightDetails.departureTime || '');
 
     return {
       passenger: {
@@ -222,17 +219,16 @@ export const BoardingPass = () => {
         seat: seat
       },
       flight: {
-        number: state.flightDetails.flightNumber,
-        airline: state.flightDetails.airline,
+        number: state.flightDetails.flightNumber || '',
+        airline: state.flightDetails.airline || '',
         from: state.flightDetails.from,
         to: state.flightDetails.to,
         date: state.flightDetails.date,
-        departureTime: state.flightDetails.departureTime,
-        arrivalTime: state.flightDetails.arrivalTime,
-        gate: state.flightDetails.gate,
-        terminal: state.flightDetails.terminal,
+        departureTime: state.flightDetails.departureTime || '',
+        gate: state.flightDetails.gate || '',
+        terminal: state.flightDetails.terminal || '',
         boardingTime: boardingTime,
-        duration: state.flightDetails.duration
+        duration: state.flightDetails.duration || ''
       },
       seq: generateSequence(),
       pnr: generatePNR(),
@@ -616,13 +612,6 @@ export const BoardingPass = () => {
   );
 };
 
-const formatTime = (time: string, offsetMinutes: number = 0) => {
-  const [hours, minutes] = time.split(':').map(Number);
-  const date = new Date();
-  date.setHours(hours, minutes + offsetMinutes);
-  return date.getHours().toString().padStart(2, '0') + 
-         (date.getMinutes() === 0 ? '00' : date.getMinutes().toString());
-};
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString('en-GB', {

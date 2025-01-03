@@ -1,23 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Box,
-  Button,
-  Dialog,
-  DialogContent,
-  Typography,
-  Paper,
-  Container,
-  Stepper,
-  Step,
-  StepLabel,
-  CircularProgress,
-  Alert,
-  Snackbar
-} from '@mui/material';
-import Webcam from 'react-webcam';
-import { useFlightContext } from '../context/FlightContext';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Box, Typography, Container, Paper, Button, Stepper, Step, StepLabel, Snackbar, Alert, CircularProgress } from '@mui/material';
+import Webcam from 'react-webcam';
+import { motion } from 'framer-motion';
+import { useFlightContext } from '../context/FlightContext';
+
 
 export const SelfCheckIn = () => {
   const navigate = useNavigate();
@@ -46,9 +33,10 @@ export const SelfCheckIn = () => {
 
       // Update context with verification status
       dispatch({
-        type: 'UPDATE_CHECK_IN_STATUS',
+        type: 'SET_VERIFICATION_STATUS',
         payload: {
-          [`${person}Verified`]: true
+          person1Verified: person === 'person1',
+          person2Verified: person === 'person2'
         }
       });
 
@@ -68,6 +56,7 @@ export const SelfCheckIn = () => {
   const handleComplete = () => {
     navigate('/boarding-pass');
   };
+
 
   const renderPassengerVerification = (person: 'person1' | 'person2') => {
     const passengerData = state?.passengers[person];

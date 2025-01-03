@@ -1,69 +1,34 @@
-import { useState, useEffect } from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper 
-} from '@mui/material';
-import { motion } from 'framer-motion';
-
-interface Flight {
-  id: string;
-  flightNumber: string;
-  departure: string;
-  arrival: string;
-  status: string;
-}
+import { Box, Typography } from '@mui/material';
+import { generateFlightSchedules } from '../data/flightData';
 
 export const FlightList = () => {
-  const [flights, setFlights] = useState<Flight[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchFlights();
-  }, []);
-
-  const fetchFlights = async () => {
-    try {
-      const response = await fetch('/api/flights');
-      const data = await response.json();
-      setFlights(data);
-    } catch (error) {
-      console.error('Error fetching flights:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const today = new Date().toISOString().split('T')[0];
+  const defaultFlights = generateFlightSchedules('DEL', 'BOM', today);
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Flight Number</TableCell>
-            <TableCell>Departure</TableCell>
-            <TableCell>Arrival</TableCell>
-            <TableCell>Status</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {flights.map((flight) => (
-            <motion.tr
-              key={flight.id}
-              whileHover={{ scale: 1.02, backgroundColor: '#f5f5f5' }}
-              transition={{ duration: 0.2 }}
-            >
-              <TableCell>{flight.flightNumber}</TableCell>
-              <TableCell>{flight.departure}</TableCell>
-              <TableCell>{flight.arrival}</TableCell>
-              <TableCell>{flight.status}</TableCell>
-            </motion.tr>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Box>
+      <Typography variant="h6" gutterBottom>
+        Popular Routes
+      </Typography>
+      {defaultFlights.slice(0, 3).map((flight) => (
+        <Box
+          key={flight.id}
+          sx={{
+            p: 2,
+            mb: 2,
+            bgcolor: 'background.paper',
+            borderRadius: 1,
+            boxShadow: 1
+          }}
+        >
+          <Typography variant="subtitle1">
+            {flight.airline} - {flight.flightNumber}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {flight.from} → {flight.to}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
   );
 }; 

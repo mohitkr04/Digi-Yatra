@@ -1,45 +1,99 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useReducer, ReactNode, Dispatch } from 'react';
 
-interface PassengerDetails {
+
+export interface FlightDetails {
+  from: string;
+  to: string;
+  date: string;
+  flightNumber?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  airline?: string;
+  airlineCode?: string;
+  terminal?: string;
+  gate?: string;
+  duration?: string;
+}
+
+export interface Flight {
+  id: string;
+  airline: string;
+  airlineCode: string;
+  logo: string;
+  flightNumber: string;
+  from: string;
+  to: string;
+  date: string;
+  departureTime: string;
+  arrivalTime: string;
+  duration: string;
+  type: string;
+  price: number;
+  seatsAvailable: number;
+  terminal: string;
+  gate: string;
+  specialOffer?: {
+    tag: string;
+    originalPrice: number;
+  };
+}
+
+export interface Passenger {
   firstName: string;
   lastName: string;
   email: string;
-  images: { id: string; dataUrl: string; }[];
+  images: string[];
 }
 
-interface FlightState {
-  flightDetails: {
+export interface BoardingPass {
+  passenger: {
+    firstName: string;
+    lastName: string;
+    seat: string;
+  };
+  flight: {
+    number: string;
+    airline: string;
     from: string;
     to: string;
     date: string;
-    flightNumber?: string;
-    departureTime?: string;
-    arrivalTime?: string;
+    departureTime: string;
+    gate: string;
+    terminal: string;
+    boardingTime: string;
+    duration: string;
   };
+  seq: string;
+  pnr: string;
+  services: string;
+}
+
+interface FlightState {
+  verificationStatus: any;
+  flightDetails: FlightDetails;
   passengers: {
-    person1: PassengerDetails;
-    person2: PassengerDetails;
+    person1: Passenger;
+    person2: Passenger;
   };
   selectedSeats: string[];
-  boardingPass?: {
-    gate?: string;
-    boardingTime?: string;
-    terminal?: string;
-    class?: string;
-    qrCode?: string;
-  };
+  boardingPass?: BoardingPass;
   checkInStatus: {
     person1Verified: boolean;
     person2Verified: boolean;
   };
 }
 
-type FlightAction = 
-  | { type: 'SET_FLIGHT_DETAILS'; payload: FlightState['flightDetails'] }
-  | { type: 'SET_PASSENGER_DETAILS'; payload: FlightState['passengers'] }
+interface PassengerDetails {
+  person1: Passenger;
+  person2: Passenger;
+}
+
+export type FlightAction = 
+  | { type: 'SET_FLIGHT_DETAILS'; payload: FlightDetails }
+  | { type: 'SET_PASSENGER_DETAILS'; payload: PassengerDetails }
   | { type: 'SET_SELECTED_SEATS'; payload: string[] }
-  | { type: 'SET_BOARDING_PASS'; payload: FlightState['boardingPass'] }
-  | { type: 'SET_CHECK_IN_STATUS'; payload: FlightState['checkInStatus'] };
+  | { type: 'SET_BOARDING_PASS'; payload: BoardingPass }
+  | { type: 'SET_VERIFICATION_STATUS'; payload: { person1Verified: boolean; person2Verified: boolean } };
 
 const initialState: FlightState = {
   flightDetails: {
@@ -70,11 +124,12 @@ const initialState: FlightState = {
     person2Verified: false,
   },
   boardingPass: undefined,
+  verificationStatus: undefined
 };
 
 const FlightContext = createContext<{
   state: FlightState;
-  dispatch: React.Dispatch<FlightAction>;
+  dispatch: Dispatch<FlightAction>;
 } | undefined>(undefined);
 
 function flightReducer(state: FlightState, action: FlightAction): FlightState {
@@ -82,13 +137,13 @@ function flightReducer(state: FlightState, action: FlightAction): FlightState {
     case 'SET_FLIGHT_DETAILS':
       return { ...state, flightDetails: action.payload };
     case 'SET_PASSENGER_DETAILS':
-      return { ...state, passengers: action.payload };
+      return { ...state, passengers: action.payload as { person1: Passenger; person2: Passenger } };
     case 'SET_SELECTED_SEATS':
       return { ...state, selectedSeats: action.payload };
     case 'SET_BOARDING_PASS':
       return { ...state, boardingPass: action.payload };
-    case 'SET_CHECK_IN_STATUS':
-      return { ...state, checkInStatus: action.payload };
+    case 'SET_VERIFICATION_STATUS':
+      return { ...state, checkInStatus: { ...state.checkInStatus, ...action.payload } };
     default:
       return state;
   }
@@ -103,10 +158,10 @@ export function FlightProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useFlightContext() {
+export const useFlightContext = () => {
   const context = useContext(FlightContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useFlightContext must be used within a FlightProvider');
   }
   return context;
-} 
+}; 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import {
   Container,
   Paper,
@@ -11,14 +11,13 @@ import {
   CircularProgress,
   Tooltip,
 } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Webcam from 'react-webcam';
 import { Camera, Delete, Help, ChevronRight, ChevronLeft } from '@mui/icons-material';
 import { useFlightContext } from '../context/FlightContext';
 import { useNavigate } from 'react-router-dom';
 
 const MAX_CAPTURES = 6;
-const CAPTURE_DELAY = 1000;
 const FACE_ANIMATION_VIDEO = '/Face Recognition.mp4';
 
 const faceGuideAnimations = [
@@ -36,6 +35,19 @@ interface FaceImage {
 
 type PersonKey = 'person1' | 'person2';
 
+interface Passenger {
+  firstName: string;
+  lastName: string;
+  email: string;
+  images: string[];
+}
+
+interface PassengerDetails {
+  person1: Passenger;
+  person2: Passenger;
+}
+
+
 export const PassengerDetails = () => {
   const navigate = useNavigate();
   const webcamRef = useRef<Webcam>(null);
@@ -46,12 +58,10 @@ export const PassengerDetails = () => {
   });
   const [currentPerson, setCurrentPerson] = useState(1);
   const [captureProgress, setCaptureProgress] = useState(0);
-  const [currentAngle, setCurrentAngle] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [captureComplete, setCaptureComplete] = useState(false);
-  const progressTimer = useRef<NodeJS.Timeout | null>(null);
+  const [currentAngle] = useState(0);
 
-  const { state, dispatch } = useFlightContext();
+  const { dispatch } = useFlightContext();
 
   const [formData, setFormData] = useState({
     person1: {
@@ -68,30 +78,6 @@ export const PassengerDetails = () => {
     },
   });
 
-  const handleCapture = () => {
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        const newImage: FaceImage = {
-          id: Date.now().toString(),
-          dataUrl: imageSrc,
-        };
-        const person = `person${currentPerson}` as PersonKey;
-        setCapturedImages(prev => ({
-          ...prev,
-          [person]: [...(prev[person] || []), newImage],
-        }));
-        setFormData(prev => ({
-          ...prev,
-          [person]: {
-            ...prev[person],
-            images: [...(prev[person].images || []), newImage],
-          },
-        }));
-      }
-      setIsCameraOpen(false);
-    }
-  };
 
   const handleDeleteImage = (imageId: string) => {
     const person = `person${currentPerson}` as PersonKey;
@@ -102,7 +88,7 @@ export const PassengerDetails = () => {
     setFormData(prev => ({
       ...prev,
       [person]: {
-        ...prev[person],
+        ...prev[person as keyof typeof prev],
         images: prev[person].images.filter(img => img.id !== imageId),
       },
     }));
@@ -121,30 +107,43 @@ export const PassengerDetails = () => {
   };
 
   const handleSubmit = () => {
-    // Validate required fields
     const person1 = formData.person1;
     const person2 = formData.person2;
 
-    if (!person1.firstName || !person1.lastName || !person1.email ||
-        !person2.firstName || !person2.lastName || !person2.email) {
-      alert('Please fill in all required fields for both passengers');
+    const validatePerson = (person: Passenger, personNum: number) => {
+      const errors = [];
+      if (!person.firstName.trim()) errors.push(`Person ${personNum}: First name is required`);
+      if (!person.lastName.trim()) errors.push(`Person ${personNum}: Last name is required`);
+      if (!person.email.trim()) errors.push(`Person ${personNum}: Email is required`);
+      if (person.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(person.email)) {
+        errors.push(`Person ${personNum}: Invalid email format`);
+      }
+      if (!person.images.length) errors.push(`Person ${personNum}: At least one face capture is required`);
+      return errors;
+    };
+    const errors = [
+      ...validatePerson(person1 as unknown as Passenger, 1),
+      ...validatePerson(person2 as unknown as Passenger, 2)
+    ];
+
+    if (errors.length > 0) {
+      alert(errors.join('\n'));
       return;
     }
 
     try {
-      // Ensure proper data structure
-      const passengerData = {
+      const passengerData: PassengerDetails = {
         person1: {
-          firstName: person1.firstName.trim(),
-          lastName: person1.lastName.trim(),
-          email: person1.email.trim(),
-          images: person1.images || []
+          firstName: formData.person1.firstName.trim(),
+          lastName: formData.person1.lastName.trim(),
+          email: formData.person1.email.trim(),
+          images: formData.person1.images.map(img => img.dataUrl)
         },
         person2: {
-          firstName: person2.firstName.trim(),
-          lastName: person2.lastName.trim(),
-          email: person2.email.trim(),
-          images: person2.images || []
+          firstName: formData.person2.firstName.trim(),
+          lastName: formData.person2.lastName.trim(),
+          email: formData.person2.email.trim(),
+          images: formData.person2.images.map(img => img.dataUrl)
         }
       };
 
@@ -153,8 +152,6 @@ export const PassengerDetails = () => {
         payload: passengerData
       });
 
-      // Add debug logging
-      console.log('Saved passenger details:', passengerData);
       navigate('/seat-selection');
     } catch (error) {
       console.error('Error saving passenger details:', error);
@@ -166,7 +163,6 @@ export const PassengerDetails = () => {
     const person = `person${currentPerson}` as PersonKey;
     const currentImageCount = capturedImages[person]?.length || 0;
     
-    // Check if we've reached the maximum number of captures
     if (currentImageCount >= MAX_CAPTURES) {
       alert('Maximum number of captures reached. Delete an image to capture a new one.');
       return;
@@ -175,26 +171,38 @@ export const PassengerDetails = () => {
     setIsCapturing(true);
     setCaptureProgress(0);
     
-    // Only capture one image
-    if (webcamRef.current) {
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (imageSrc) {
-        const newImage = {
-          id: Date.now().toString(),
-          dataUrl: imageSrc,
-        };
-        
-        setCapturedImages(prev => ({
-          ...prev,
-          [person]: [...(prev[person] || []), newImage],
-        }));
-        
-        setCaptureProgress(100);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (webcamRef.current) {
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (imageSrc) {
+          const newImage: FaceImage = {
+            id: Date.now().toString(),
+            dataUrl: imageSrc,
+          };
+          
+          setCapturedImages(prev => ({
+            ...prev,
+            [person]: [...(prev[person] || []), newImage],
+          }));
+          
+          setFormData(prev => ({
+            ...prev,
+            [person]: {
+              ...prev[person],
+              images: [...prev[person].images, newImage],
+            },
+          }));
+        }
       }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      alert('Failed to capture image. Please try again.');
+    } finally {
+      setIsCapturing(false);
+      setCaptureProgress(100);
     }
-    
-    setIsCapturing(false);
-    setCaptureComplete(true);
   };
 
   return (
