@@ -148,7 +148,7 @@ digi-yatra/
 
 ## 👥 Authors
 
-- Mohit Kumar - Initial work - [YourGitHub](https://github.com/mohitkr04)
+- Mohit Kumar - Initial work - [mohitkr04](https://github.com/mohitkr04)
 
 ## 🙏 Acknowledgments
 
